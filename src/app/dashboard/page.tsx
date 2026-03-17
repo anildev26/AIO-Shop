@@ -45,9 +45,9 @@ export default async function DashboardPage({ searchParams }: Props) {
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       <Navbar user={session?.user ?? null} />
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8 flex-1">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Product Catalog</h1>

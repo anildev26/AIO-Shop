@@ -51,9 +51,9 @@ export default async function ProductDetailPage({ params }: Props) {
     : "#";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       <Navbar user={session?.user ?? null} />
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8 flex-1">
         <Link href="/dashboard" className="text-blue-600 dark:text-blue-400 hover:underline text-sm mb-6 inline-block">
           &larr; Back to catalog
         </Link>
@@ -65,7 +65,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 src={product.imageUrl}
                 alt={product.name}
                 fill
-                className="object-contain"
+                className="object-cover"
                 sizes="(max-width: 768px) 100vw, 400px"
               />
             </div>
