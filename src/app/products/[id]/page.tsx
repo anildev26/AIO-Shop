@@ -51,9 +51,9 @@ export default async function ProductDetailPage({ params }: Props) {
     : "#";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Navbar user={session?.user ?? null} />
-      <main className="max-w-5xl mx-auto px-4 py-8 flex-1">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         <Link href="/dashboard" className="text-blue-600 dark:text-blue-400 hover:underline text-sm mb-6 inline-block">
           &larr; Back to catalog
         </Link>
