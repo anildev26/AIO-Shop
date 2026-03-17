@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { slugify } from "@/lib/utils";
 
 const pricingTierSchema = z.object({
   months: z.number().int().positive(),
@@ -51,6 +52,13 @@ export async function POST(request: NextRequest) {
     data.price = Math.min(...data.pricingTiers.map((t) => t.price));
   }
 
-  const product = await prisma.product.create({ data: { ...data, price: data.price! } });
+  // Auto-generate slug from product name
+  let slug = slugify(data.name);
+  const existing = await prisma.product.findUnique({ where: { slug } });
+  if (existing) {
+    slug = `${slug}-${Date.now().toString(36)}`;
+  }
+
+  const product = await prisma.product.create({ data: { ...data, price: data.price!, slug } });
   return NextResponse.json(product, { status: 201 });
 }

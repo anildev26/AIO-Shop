@@ -57,6 +57,7 @@ model VerificationToken {
 model Product {
   id           String        @id @default(cuid())
   name         String
+  slug         String?       @unique
   description  String
   price        Float
   pricingTiers Json?

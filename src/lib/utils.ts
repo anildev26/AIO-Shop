@@ -29,5 +29,14 @@ export function buildTelegramLink(username: string, productName: string): string
   const message = encodeURIComponent(
     `Hi! I'm interested in: ${productName}. Can you please provide more details?`
   );
-  return `https://t.me/${username}?text=${message}`;
+  // Support full URLs (https://t.me/...) or plain usernames
+  const baseUrl = username.startsWith("http") ? username : `https://t.me/${username}`;
+  return `${baseUrl}?text=${message}`;
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }

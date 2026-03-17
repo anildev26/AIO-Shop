@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/shop/Navbar";
 import ReviewForm from "@/components/shop/ReviewForm";
 import ReviewList from "@/components/shop/ReviewList";
+import Footer from "@/components/shop/Footer";
 import { formatPrice, buildWhatsAppLink, buildTelegramLink, type PricingTier } from "@/lib/utils";
 
 interface Props {
@@ -17,9 +18,13 @@ export default async function ProductDetailPage({ params }: Props) {
 
   const { id } = await params;
 
+  // Try slug first, then fall back to ID
   const [product, settings] = await Promise.all([
-    prisma.product.findUnique({
-      where: { id, isVisible: true },
+    prisma.product.findFirst({
+      where: {
+        isVisible: true,
+        OR: [{ slug: id }, { id }],
+      },
       include: {
         reviews: {
           where: { status: "APPROVED" },
@@ -55,13 +60,13 @@ export default async function ProductDetailPage({ params }: Props) {
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-            <div className="relative aspect-square bg-slate-100 dark:bg-slate-800">
+            <div className="relative aspect-[4/3] max-h-[400px] bg-slate-100 dark:bg-slate-800">
               <Image
                 src={product.imageUrl}
                 alt={product.name}
                 fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 400px"
               />
             </div>
 
@@ -192,6 +197,7 @@ export default async function ProductDetailPage({ params }: Props) {
           <ReviewList reviews={product.reviews} />
         </div>
       </main>
+      <Footer />
     </div>
   );
 }
