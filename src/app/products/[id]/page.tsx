@@ -65,7 +65,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 src={product.imageUrl}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="(max-width: 768px) 100vw, 400px"
               />
             </div>
