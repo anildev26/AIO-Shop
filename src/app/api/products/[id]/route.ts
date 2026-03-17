@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { deleteImage } from "@/lib/cloudinary";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const pricingTierSchema = z.object({
   months: z.number().int().positive(),
@@ -46,7 +47,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const product = await prisma.product.update({
     where: { id },
-    data,
+    data: {
+      ...data,
+      pricingTiers: data.pricingTiers === null
+        ? Prisma.JsonNull
+        : data.pricingTiers === undefined
+        ? undefined
+        : (data.pricingTiers as unknown as Prisma.InputJsonValue),
+    },
   });
 
   return NextResponse.json(product);

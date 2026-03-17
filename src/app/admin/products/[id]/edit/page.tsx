@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import ProductForm from "@/components/admin/ProductForm";
+import type { PricingTier } from "@/lib/utils";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -19,7 +20,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <Link href="/admin/products" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">&larr; Products</Link>
       </nav>
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <ProductForm product={product} />
+        <ProductForm product={{ ...product, pricingTiers: product.pricingTiers as unknown as PricingTier[] | null }} />
       </main>
     </div>
   );

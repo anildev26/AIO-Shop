@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import ProductCard from "@/components/shop/ProductCard";
 import Navbar from "@/components/shop/Navbar";
 import SearchSort from "@/components/shop/SearchSort";
+import type { PricingTier } from "@/lib/utils";
 
 interface Props {
   searchParams: Promise<{ search?: string; sort?: string }>;
@@ -76,7 +77,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         ) : (
           <div className="flex flex-wrap gap-3 sm:gap-6 mt-6 [&>*]:min-w-[140px] [&>*]:flex-1 [&>*]:max-w-[220px] sm:[&>*]:max-w-[260px]">
             {products.map((product: (typeof products)[number]) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={{ ...product, pricingTiers: product.pricingTiers as unknown as PricingTier[] | null }} />
             ))}
           </div>
         )}
