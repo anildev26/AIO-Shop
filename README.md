@@ -1,0 +1,58 @@
+# AIO Shop
+
+**All-in-one digital product store** — a modern, responsive e-commerce platform for browsing and managing digital products.
+
+![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-4169E1?logo=postgresql)
+
+---
+
+## Features
+
+- **Product Catalog** — Dynamic, responsive grid with search, category filters, and sorting
+- **Product Pages** — Detailed view with pricing tiers, descriptions, and images
+- **Customer Reviews** — Star ratings and feedback system with moderation
+- **Admin Dashboard** — Full product management (CRUD), review moderation, and site settings
+- **Contact & Feedback Tabs** — WhatsApp and Telegram integration for customer support
+- **Dark / Light Mode** — Theme toggle with dark mode as default
+- **Mobile Responsive** — Optimized layout for all screen sizes with floating action buttons
+- **Image Hosting** — Cloud-based image uploads for product listings
+- **Export / Import** — JSON backup and restore for product data
+- **Analytics** — Google Analytics and Vercel Analytics integration
+- **Authentication** — Secure login and signup with role-based access control
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| Auth | NextAuth v5 (JWT) |
+| Images | Cloudinary |
+| Deployment | Vercel |
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/dashboard-dark.png" alt="Dashboard - Dark Mode" width="700" />
+  <br />
+  <em>Product Dashboard — Dark Mode</em>
+</p>
+
+<p align="center">
+  <img src="docs/dashboard-light.png" alt="Dashboard - Light Mode" width="700" />
+  <br />
+  <em>Product Dashboard — Light Mode</em>
+</p>
+
+> Add your own screenshots to a `docs/` folder to display them here.
+
+## License
+
+Copyright &copy; 2026 AIO Shop. All rights reserved.
