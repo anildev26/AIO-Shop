@@ -17,12 +17,12 @@ export default auth(function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const gateCookie = request.cookies.get("site_gate");
-  const isGateValid = gateCookie?.value === process.env.SITE_PASSWORD_HASH;
-
-  if (!isGateValid) {
-    return NextResponse.redirect(new URL("/gate", request.url));
-  }
+  // GATE TOGGLE: To re-enable the gate page, uncomment the 4 lines below
+  // const gateCookie = request.cookies.get("site_gate");
+  // const isGateValid = gateCookie?.value === process.env.SITE_PASSWORD_HASH;
+  // if (!isGateValid) {
+  //   return NextResponse.redirect(new URL("/gate", request.url));
+  // }
 
   // Redirect root to dashboard
   if (pathname === "/") {
