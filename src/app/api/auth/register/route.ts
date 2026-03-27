@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { registerUser } from "@/lib/supabase/auth-helpers";
 
 const schema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
@@ -21,23 +20,11 @@ export async function POST(request: NextRequest) {
   }
 
   const { username, email, password } = parsed.data;
+  const result = await registerUser(email, password, username);
 
-  const existing = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] },
-  });
-
-  if (existing) {
-    return NextResponse.json(
-      { error: "Email or username already in use." },
-      { status: 409 }
-    );
+  if (result.error) {
+    return NextResponse.json({ error: result.error }, { status: 409 });
   }
-
-  const hashed = await bcrypt.hash(password, 12);
-
-  await prisma.user.create({
-    data: { username, email, password: hashed },
-  });
 
   return NextResponse.json({ success: true }, { status: 201 });
 }

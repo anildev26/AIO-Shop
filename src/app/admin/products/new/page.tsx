@@ -1,11 +1,11 @@
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ProductForm from "@/components/admin/ProductForm";
 
 export default async function NewProductPage() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/dashboard");
+  const admin = await requireAdmin();
+  if (!admin) redirect("/dashboard");
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">

@@ -1,14 +1,30 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import SettingsForm from "@/components/admin/SettingsForm";
 
 export default async function AdminSettingsPage() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/dashboard");
+  const admin = await requireAdmin();
+  if (!admin) redirect("/dashboard");
 
-  const settings = await prisma.settings.findFirst();
+  const supabase = await createServiceSupabase();
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("*")
+    .limit(1)
+    .single();
+
+  // Map snake_case to camelCase for SettingsForm
+  const mappedSettings = settings ? {
+    id: settings.id,
+    sitePassword: settings.site_password,
+    whatsappNumber: settings.whatsapp_number,
+    telegramUsername: settings.telegram_username,
+    siteName: settings.site_name,
+    siteDescription: settings.site_description,
+    productsSold: settings.products_sold,
+  } : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -17,7 +33,7 @@ export default async function AdminSettingsPage() {
         <Link href="/admin" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">&larr; Admin</Link>
       </nav>
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <SettingsForm settings={settings} />
+        <SettingsForm settings={mappedSettings} />
       </main>
     </div>
   );

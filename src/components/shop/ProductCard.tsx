@@ -7,10 +7,12 @@ interface Product {
   id: string;
   name: string;
   slug?: string | null;
+  description?: string;
   price: number;
   pricingTiers?: PricingTier[] | null;
   imageUrl: string;
   inStock: boolean;
+  isVisible?: boolean;
 }
 
 export default function ProductCard({ product }: { product: Product }) {

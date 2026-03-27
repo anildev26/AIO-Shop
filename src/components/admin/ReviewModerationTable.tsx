@@ -8,7 +8,7 @@ interface Review {
   rating: number;
   comment: string;
   status: string;
-  createdAt: Date;
+  createdAt: Date | string;
   user: { username: string };
   product: { name: string };
 }

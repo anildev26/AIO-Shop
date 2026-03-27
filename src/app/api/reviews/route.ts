@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getUser } from "@/lib/supabase/auth-helpers";
+import { createServiceSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const schema = z.object({
@@ -10,8 +10,8 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getUser();
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -22,13 +22,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const review = await prisma.review.create({
-    data: {
-      ...parsed.data,
-      userId: session.user.id,
+  const supabase = await createServiceSupabase();
+  const { data: review, error } = await supabase
+    .from("reviews")
+    .insert({
+      product_id: parsed.data.productId,
+      rating: parsed.data.rating,
+      comment: parsed.data.comment,
+      user_id: user.id,
       status: "PENDING",
-    },
-  });
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json(review, { status: 201 });
 }

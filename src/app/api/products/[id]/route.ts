@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
+import { createServiceSupabase } from "@/lib/supabase/server";
 import { deleteImage } from "@/lib/cloudinary";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 
 const pricingTierSchema = z.object({
   months: z.number().int().positive(),
@@ -25,8 +24,8 @@ const schema = z.object({
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -40,39 +39,66 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const data = { ...parsed.data };
 
-  // Auto-compute price from tiers if tiers are being updated
   if (data.pricingTiers && data.pricingTiers.length > 0) {
     data.price = Math.min(...data.pricingTiers.map((t) => t.price));
   }
 
-  const product = await prisma.product.update({
-    where: { id },
-    data: {
-      ...data,
-      pricingTiers: data.pricingTiers === null
-        ? Prisma.JsonNull
-        : data.pricingTiers === undefined
-        ? undefined
-        : (data.pricingTiers as unknown as Prisma.InputJsonValue),
-    },
-  });
+  // Map camelCase to snake_case for Supabase
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.price !== undefined) updateData.price = data.price;
+  if (data.pricingTiers !== undefined) updateData.pricing_tiers = data.pricingTiers;
+  if (data.instructions !== undefined) updateData.instructions = data.instructions;
+  if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
+  if (data.imagePublicId !== undefined) updateData.image_public_id = data.imagePublicId;
+  if (data.pinnedImageUrl !== undefined) updateData.pinned_image_url = data.pinnedImageUrl;
+  if (data.pinnedImagePublicId !== undefined) updateData.pinned_image_public_id = data.pinnedImagePublicId;
+  if (data.inStock !== undefined) updateData.in_stock = data.inStock;
+  if (data.isVisible !== undefined) updateData.is_visible = data.isVisible;
+
+  const supabase = await createServiceSupabase();
+  const { data: product, error } = await supabase
+    .from("products")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json(product);
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { id } = await params;
-  const product = await prisma.product.findUnique({ where: { id } });
+  const supabase = await createServiceSupabase();
 
-  if (product?.imagePublicId) {
-    await deleteImage(product.imagePublicId);
+  const { data: product } = await supabase
+    .from("products")
+    .select("image_public_id")
+    .eq("id", id)
+    .single();
+
+  if (product?.image_public_id) {
+    await deleteImage(product.image_public_id);
   }
 
-  await prisma.product.delete({ where: { id } });
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   return NextResponse.json({ success: true });
 }

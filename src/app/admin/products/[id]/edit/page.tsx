@@ -1,17 +1,39 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import ProductForm from "@/components/admin/ProductForm";
 import type { PricingTier } from "@/lib/utils";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/dashboard");
+  const admin = await requireAdmin();
+  if (!admin) redirect("/dashboard");
 
   const { id } = await params;
-  const product = await prisma.product.findUnique({ where: { id } });
+  const supabase = await createServiceSupabase();
+  const { data: product } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", id)
+    .single();
+
   if (!product) notFound();
+
+  // Map snake_case to camelCase for ProductForm
+  const mappedProduct = {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    pricingTiers: product.pricing_tiers as unknown as PricingTier[] | null,
+    instructions: product.instructions,
+    imageUrl: product.image_url,
+    imagePublicId: product.image_public_id,
+    pinnedImageUrl: product.pinned_image_url,
+    pinnedImagePublicId: product.pinned_image_public_id,
+    inStock: product.in_stock,
+    isVisible: product.is_visible,
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -20,7 +42,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <Link href="/admin/products" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">&larr; Products</Link>
       </nav>
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <ProductForm product={{ ...product, pricingTiers: product.pricingTiers as unknown as PricingTier[] | null }} />
+        <ProductForm product={mappedProduct} />
       </main>
     </div>
   );

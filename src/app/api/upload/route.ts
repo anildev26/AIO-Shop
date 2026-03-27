@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
 import { uploadImage } from "@/lib/cloudinary";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

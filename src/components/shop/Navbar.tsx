@@ -2,18 +2,20 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/components/ThemeProvider";
 import Logo from "@/components/Logo";
 
 interface Props {
-  user: { name?: string | null; email?: string | null; username?: string; role?: string } | null;
+  user: { id: string; email: string; username: string; role: string } | null;
 }
 
 export default function Navbar({ user }: Props) {
   const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -24,6 +26,13 @@ export default function Navbar({ user }: Props) {
     if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/dashboard");
+    router.refresh();
+  }
 
   return (
     <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
@@ -39,15 +48,15 @@ export default function Navbar({ user }: Props) {
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm hover:bg-blue-700 transition"
-                title={user.username || user.name || "Profile"}
+                title={user.username || "Profile"}
               >
-                {(user.username || user.name || "U").charAt(0).toUpperCase()}
+                {(user.username || "U").charAt(0).toUpperCase()}
               </button>
 
               {menuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-2 z-50">
                   <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-                    <p className="font-semibold text-sm text-slate-800 dark:text-white">{user.username || user.name}</p>
+                    <p className="font-semibold text-sm text-slate-800 dark:text-white">{user.username}</p>
                     <p className="text-xs text-slate-400 dark:text-slate-500">{user.email}</p>
                   </div>
 
@@ -88,7 +97,7 @@ export default function Navbar({ user }: Props) {
 
                   <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
                     <button
-                      onClick={() => signOut({ callbackUrl: "/dashboard" })}
+                      onClick={handleSignOut}
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

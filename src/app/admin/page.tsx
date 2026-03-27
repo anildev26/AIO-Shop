@@ -1,24 +1,31 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ProductsSoldCounter from "@/components/admin/ProductsSoldCounter";
 
 export default async function AdminPage() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/dashboard");
+  const admin = await requireAdmin();
+  if (!admin) redirect("/dashboard");
 
-  const [productCount, pendingReviews, userCount, settings] = await Promise.all([
-    prisma.product.count(),
-    prisma.review.count({ where: { status: "PENDING" } }),
-    prisma.user.count(),
-    prisma.settings.findFirst(),
+  const supabase = await createServiceSupabase();
+
+  const [
+    { count: productCount },
+    { count: pendingReviews },
+    { count: userCount },
+    { data: settings },
+  ] = await Promise.all([
+    supabase.from("products").select("*", { count: "exact", head: true }),
+    supabase.from("reviews").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("settings").select("*").limit(1).single(),
   ]);
 
   const stats = [
-    { label: "Total Products", value: productCount, href: "/admin/products", color: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
-    { label: "Pending Reviews", value: pendingReviews, href: "/admin/reviews", color: "bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300" },
-    { label: "Registered Users", value: userCount, href: "#", color: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
+    { label: "Total Products", value: productCount ?? 0, href: "/admin/products", color: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
+    { label: "Pending Reviews", value: pendingReviews ?? 0, href: "/admin/reviews", color: "bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300" },
+    { label: "Registered Users", value: userCount ?? 0, href: "#", color: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
   ];
 
   return (
@@ -40,7 +47,7 @@ export default async function AdminPage() {
               </div>
             </Link>
           ))}
-          <ProductsSoldCounter initialCount={settings?.productsSold ?? 0} />
+          <ProductsSoldCounter initialCount={settings?.products_sold ?? 0} />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

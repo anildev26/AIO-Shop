@@ -1,17 +1,38 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import AdminProductsTable from "@/components/admin/AdminProductsTable";
 import ProductActions from "@/components/admin/ProductActions";
 
 export default async function AdminProductsPage() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/dashboard");
+  const admin = await requireAdmin();
+  if (!admin) redirect("/dashboard");
 
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const supabase = await createServiceSupabase();
+  const { data: products } = await supabase
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  // Map snake_case to camelCase for components
+  const mappedProducts = (products || []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    description: p.description,
+    price: p.price,
+    pricingTiers: p.pricing_tiers,
+    instructions: p.instructions,
+    imageUrl: p.image_url,
+    imagePublicId: p.image_public_id,
+    pinnedImageUrl: p.pinned_image_url,
+    pinnedImagePublicId: p.pinned_image_public_id,
+    inStock: p.in_stock,
+    isVisible: p.is_visible,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }));
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -25,7 +46,7 @@ export default async function AdminProductsPage() {
         </div>
       </nav>
       <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
-        <AdminProductsTable products={products} />
+        <AdminProductsTable products={mappedProducts} />
       </main>
       <div className="md:hidden">
         <ProductActions mode="fab" />

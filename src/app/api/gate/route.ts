@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createServiceSupabase } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   const { password } = await request.json();
 
-  const settings = await prisma.settings.findFirst();
-  if (!settings || password !== settings.sitePassword) {
+  const supabase = await createServiceSupabase();
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("site_password")
+    .limit(1)
+    .single();
+
+  if (!settings || password !== settings.site_password) {
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
@@ -14,7 +20,7 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
     path: "/",
   });
 

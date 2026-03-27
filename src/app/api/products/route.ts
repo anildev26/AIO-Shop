@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { slugify } from "@/lib/utils";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
+import { createServiceSupabase } from "@/lib/supabase/server";
 
 const pricingTierSchema = z.object({
   months: z.number().int().positive(),
@@ -25,16 +25,23 @@ const schema = z.object({
 );
 
 export async function GET() {
-  const products = await prisma.product.findMany({
-    where: { isVisible: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const supabase = await createServiceSupabase();
+  const { data: products, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("is_visible", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   return NextResponse.json(products);
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -47,18 +54,42 @@ export async function POST(request: NextRequest) {
 
   const data = { ...parsed.data };
 
-  // Auto-compute price from tiers if tiers are provided
   if (data.pricingTiers && data.pricingTiers.length > 0) {
     data.price = Math.min(...data.pricingTiers.map((t) => t.price));
   }
 
-  // Auto-generate slug from product name
   let slug = slugify(data.name);
-  const existing = await prisma.product.findUnique({ where: { slug } });
+  const supabase = await createServiceSupabase();
+  const { data: existing } = await supabase
+    .from("products")
+    .select("id")
+    .eq("slug", slug)
+    .single();
+
   if (existing) {
     slug = `${slug}-${Date.now().toString(36)}`;
   }
 
-  const product = await prisma.product.create({ data: { ...data, price: data.price!, slug } });
+  const { data: product, error } = await supabase
+    .from("products")
+    .insert({
+      name: data.name,
+      slug,
+      description: data.description,
+      price: data.price!,
+      pricing_tiers: data.pricingTiers || null,
+      instructions: data.instructions || null,
+      image_url: data.imageUrl,
+      image_public_id: data.imagePublicId || null,
+      in_stock: data.inStock,
+      is_visible: data.isVisible,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   return NextResponse.json(product, { status: 201 });
 }

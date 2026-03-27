@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/auth-helpers";
 import ProductCard from "@/components/shop/ProductCard";
 import Navbar from "@/components/shop/Navbar";
 import Footer from "@/components/shop/Footer";
@@ -16,78 +16,112 @@ interface Props {
 }
 
 export default async function DashboardPage({ searchParams }: Props) {
-  const session = await auth();
-
+  const user = await getUser();
   const { search, sort } = await searchParams;
+  const supabase = await createServiceSupabase();
 
-  const [products, allReviews, settings, feedbackReviews] = await Promise.all([
-    prisma.product.findMany({
-      where: {
-        isVisible: true,
-        ...(search
-          ? { name: { contains: search, mode: "insensitive" } }
-          : {}),
-      },
-      orderBy:
-        sort === "price_asc"
-          ? { price: "asc" }
-          : sort === "price_desc"
-          ? { price: "desc" }
-          : sort === "oldest"
-          ? { createdAt: "asc" }
-          : { createdAt: "desc" },
-    }),
-    prisma.review.findMany({
-      where: { status: "APPROVED" },
-      select: { rating: true },
-    }),
-    prisma.settings.findFirst(),
-    prisma.review.findMany({
-      where: { status: "APPROVED" },
-      include: {
-        user: { select: { username: true } },
-        product: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
+  // Build products query
+  let productsQuery = supabase
+    .from("products")
+    .select("*")
+    .eq("is_visible", true);
+
+  if (search) {
+    productsQuery = productsQuery.ilike("name", `%${search}%`);
+  }
+
+  if (sort === "price_asc") {
+    productsQuery = productsQuery.order("price", { ascending: true });
+  } else if (sort === "price_desc") {
+    productsQuery = productsQuery.order("price", { ascending: false });
+  } else if (sort === "oldest") {
+    productsQuery = productsQuery.order("created_at", { ascending: true });
+  } else {
+    productsQuery = productsQuery.order("created_at", { ascending: false });
+  }
+
+  const [
+    { data: products },
+    { data: allReviews },
+    { data: settings },
+    { data: feedbackReviews },
+  ] = await Promise.all([
+    productsQuery,
+    supabase.from("reviews").select("rating").eq("status", "APPROVED"),
+    supabase.from("settings").select("*").limit(1).single(),
+    supabase
+      .from("reviews")
+      .select("id, rating, comment, created_at, user_id, product_id")
+      .eq("status", "APPROVED")
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
-  const totalSold = settings?.productsSold ?? 0;
-  const avgQuality = allReviews.length > 0
-    ? allReviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / allReviews.length
+  // Fetch user and product names for feedback reviews
+  let serializedReviews: { id: string; rating: number; comment: string; user: { username: string }; product: { name: string }; createdAt: string }[] = [];
+  if (feedbackReviews && feedbackReviews.length > 0) {
+    const userIds = [...new Set(feedbackReviews.map((r) => r.user_id))];
+    const productIds = [...new Set(feedbackReviews.map((r) => r.product_id))];
+
+    const [{ data: users }, { data: reviewProducts }] = await Promise.all([
+      supabase.from("profiles").select("id, username").in("id", userIds),
+      supabase.from("products").select("id, name").in("id", productIds),
+    ]);
+
+    const userMap = new Map((users || []).map((u) => [u.id, u.username]));
+    const productMap = new Map((reviewProducts || []).map((p) => [p.id, p.name]));
+
+    serializedReviews = feedbackReviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      user: { username: userMap.get(r.user_id) || "Unknown" },
+      product: { name: productMap.get(r.product_id) || "Unknown" },
+      createdAt: r.created_at,
+    }));
+  }
+
+  const productsList = products || [];
+  const reviewsList = allReviews || [];
+  const totalSold = settings?.products_sold ?? 0;
+  const avgQuality = reviewsList.length > 0
+    ? reviewsList.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / reviewsList.length
     : null;
 
   const productsContent = (
     <>
       <SearchSort />
-      {products.length === 0 ? (
+      {productsList.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <p className="text-lg">No products found.</p>
         </div>
       ) : (
         <div className="flex flex-wrap gap-3 sm:gap-4 mt-6 [&>*]:min-w-[120px] [&>*]:flex-1 [&>*]:max-w-[180px] sm:[&>*]:max-w-[200px] lg:[&>*]:max-w-[220px]">
-          {products.map((product: (typeof products)[number]) => (
-            <ProductCard key={product.id} product={{ ...product, pricingTiers: product.pricingTiers as unknown as PricingTier[] | null }} />
+          {productsList.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={{
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                description: product.description,
+                price: product.price,
+                pricingTiers: product.pricing_tiers as unknown as PricingTier[] | null,
+                imageUrl: product.image_url,
+                inStock: product.in_stock,
+                isVisible: product.is_visible,
+              }}
+            />
           ))}
         </div>
       )}
     </>
   );
 
-  const serializedReviews = feedbackReviews.map((r) => ({
-    id: r.id,
-    rating: r.rating,
-    comment: r.comment,
-    user: r.user,
-    product: r.product,
-    createdAt: r.createdAt.toISOString(),
-  }));
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Navbar user={session?.user ?? null} />
-      <WelcomeModal whatsappNumber={settings?.whatsappNumber} />
+      <Navbar user={user} />
+      <WelcomeModal whatsappNumber={settings?.whatsapp_number} />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -114,7 +148,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                     ))}
                   </span>
                   <span className="text-xs text-slate-400 dark:text-slate-500">
-                    ({allReviews.length} {allReviews.length === 1 ? "review" : "reviews"})
+                    ({reviewsList.length} {reviewsList.length === 1 ? "review" : "reviews"})
                   </span>
                 </div>
               ) : (
@@ -128,8 +162,8 @@ export default async function DashboardPage({ searchParams }: Props) {
           productsTab={productsContent}
           contactTab={
             <ContactTab
-              whatsappNumber={settings?.whatsappNumber}
-              telegramUsername={settings?.telegramUsername}
+              whatsappNumber={settings?.whatsapp_number}
+              telegramUsername={settings?.telegram_username}
             />
           }
           feedbackTab={<FeedbackTab reviews={serializedReviews} />}

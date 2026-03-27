@@ -1,18 +1,15 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
-const { auth } = NextAuth(authConfig);
-
-const PUBLIC_PATHS = ["/gate", "/api/auth", "/api/gate", "/_next", "/favicon.ico"];
+const PUBLIC_PATHS = ["/gate", "/api/auth", "/api/gate", "/_next", "/favicon.ico", "/icon.svg"];
 const AUTH_PATHS = ["/login", "/signup"];
 const ADMIN_PATHS = ["/admin"];
-const GUEST_PATHS = ["/dashboard", "/products"];
+const GUEST_PATHS = ["/dashboard", "/products", "/api/products", "/api/reviews", "/api/settings", "/api/upload"];
 
-export default auth(function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const req = request as NextRequest & { auth?: { user?: { role?: string } } | null };
 
+  // Allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
@@ -29,33 +26,36 @@ export default auth(function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  const session = req.auth;
+  // Refresh Supabase session
+  const { user, supabaseResponse } = await updateSession(request);
 
+  // Auth pages: redirect to dashboard if already logged in
   if (AUTH_PATHS.some((p) => pathname.startsWith(p))) {
-    if (session?.user) {
+    if (user) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
-  // Allow guest access to dashboard and product pages
+  // Guest paths: allow everyone
   if (GUEST_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
-  // All other pages require login — redirect to dashboard (not login)
-  if (!session?.user) {
+  // All other pages require login
+  if (!user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // Admin paths: check role via profile query
   if (ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
-    if (session.user.role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+    // Role check happens at the page/API level, not middleware
+    // Middleware just ensures user is authenticated
+    return supabaseResponse;
   }
 
-  return NextResponse.next();
-});
+  return supabaseResponse;
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

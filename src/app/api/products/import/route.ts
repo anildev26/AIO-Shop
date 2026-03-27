@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/supabase/auth-helpers";
+import { createServiceSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
+import { slugify } from "@/lib/utils";
 
 const pricingTierSchema = z.object({
   months: z.number().int().positive(),
@@ -24,8 +25,8 @@ const productSchema = z.object({
 );
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -48,9 +49,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "File must contain a JSON array" }, { status: 400 });
   }
 
-  // Get existing product names to skip duplicates
-  const existing = await prisma.product.findMany({ select: { name: true } });
-  const existingNames = new Set(existing.map((p) => p.name.toLowerCase()));
+  const supabase = await createServiceSupabase();
+
+  const { data: existing } = await supabase
+    .from("products")
+    .select("name");
+
+  const existingNames = new Set((existing || []).map((p) => p.name.toLowerCase()));
 
   let imported = 0;
   let skipped = 0;
@@ -70,24 +75,29 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // Auto-compute price from tiers
     if (data.pricingTiers && data.pricingTiers.length > 0) {
       data.price = Math.min(...data.pricingTiers.map((t) => t.price));
     }
 
-    await prisma.product.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        price: data.price!,
-        pricingTiers: data.pricingTiers ?? undefined,
-        instructions: data.instructions ?? undefined,
-        imageUrl: data.imageUrl,
-        pinnedImageUrl: data.pinnedImageUrl ?? undefined,
-        inStock: data.inStock,
-        isVisible: data.isVisible,
-      },
+    const slug = slugify(data.name) + (existingNames.has(slugify(data.name)) ? `-${Date.now().toString(36)}` : "");
+
+    const { error } = await supabase.from("products").insert({
+      name: data.name,
+      slug,
+      description: data.description,
+      price: data.price!,
+      pricing_tiers: data.pricingTiers || null,
+      instructions: data.instructions || null,
+      image_url: data.imageUrl,
+      pinned_image_url: data.pinnedImageUrl || null,
+      in_stock: data.inStock,
+      is_visible: data.isVisible,
     });
+
+    if (error) {
+      errors.push(`Product ${i + 1}: ${error.message}`);
+      continue;
+    }
 
     existingNames.add(data.name.toLowerCase());
     imported++;
