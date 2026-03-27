@@ -19,12 +19,30 @@ export default async function ProductDetailPage({ params }: Props) {
   const supabase = await createServiceSupabase();
 
   // Try slug first, then fall back to ID
-  const { data: product } = await supabase
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+  let product = null;
+
+  // Try slug first
+  const { data: bySlug } = await supabase
     .from("products")
     .select("*")
     .eq("is_visible", true)
-    .or(`slug.eq.${id},id.eq.${id}`)
+    .eq("slug", id)
     .single();
+
+  if (bySlug) {
+    product = bySlug;
+  } else if (isUUID) {
+    // Fall back to ID only if it's a valid UUID
+    const { data: byId } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_visible", true)
+      .eq("id", id)
+      .single();
+    product = byId;
+  }
 
   if (!product) notFound();
 
