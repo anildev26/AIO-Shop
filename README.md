@@ -38,22 +38,6 @@
 | Images | Cloudinary |
 | Deployment | Vercel |
 
-## Screenshots
-
-<p align="center">
-  <img src="docs/dashboard-dark.png" alt="Dashboard - Dark Mode" width="700" />
-  <br />
-  <em>Product Dashboard — Dark Mode</em>
-</p>
-
-<p align="center">
-  <img src="docs/dashboard-light.png" alt="Dashboard - Light Mode" width="700" />
-  <br />
-  <em>Product Dashboard — Light Mode</em>
-</p>
-
-> Add your own screenshots to a `docs/` folder to display them here.
-
 ## License
 
 Copyright &copy; 2026 AIO Shop. All rights reserved.
