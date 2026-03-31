@@ -5,7 +5,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)
+![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3FCF8E?logo=supabase)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-4169E1?logo=postgresql)
 
 ---
@@ -19,10 +19,11 @@
 - **Contact & Feedback Tabs** — WhatsApp and Telegram integration for customer support
 - **Dark / Light Mode** — Theme toggle with dark mode as default
 - **Mobile Responsive** — Optimized layout for all screen sizes with floating action buttons
-- **Image Hosting** — Cloud-based image uploads for product listings
+- **Image Hosting** — Cloud-based image uploads via Cloudinary
 - **Export / Import** — JSON backup and restore for product data
 - **Analytics** — Google Analytics and Vercel Analytics integration
 - **Authentication** — Secure login and signup with role-based access control
+- **Client-side Caching** — Zustand store for instant product page navigation
 
 ## Tech Stack
 
@@ -31,9 +32,9 @@
 | Framework | Next.js 15 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
-| Database | PostgreSQL |
-| ORM | Prisma |
-| Auth | NextAuth v5 (JWT) |
+| Database | PostgreSQL (Supabase) |
+| Auth | Supabase Auth |
+| State | Zustand |
 | Images | Cloudinary |
 | Deployment | Vercel |
 
